@@ -8,7 +8,7 @@ jobs:
   trigger_child_workflow:
     runs-on: ubuntu-latest
     env:
-      GITHUB_TOKEN: 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
+      GITHUB_TOKEN: ${{ secrets.token }}
       REPO_OWNER: ambarih
       REPO_NAME: trivy_new
       CHILD_WORKFLOW_ID: 95072086
