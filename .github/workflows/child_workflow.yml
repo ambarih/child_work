@@ -1,4 +1,4 @@
-# .github/workflows/child_workflow.yml
+
 name: Child Workflow
 on:
   push:
@@ -10,8 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TAG: python-api
-      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      DOCKER_USERNAME: ambarish6
+      DOCKER_PASSWORD: Ambi@9380
       USER: ambarish6
       VERSION: latest
 
