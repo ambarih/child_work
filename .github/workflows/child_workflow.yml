@@ -1,6 +1,9 @@
 name: Child Workflow
 on:
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      trigger_child_workflow: # Define the input parameter for the workflow call
+        description: 'Trigger the child workflow' # Description for clarity
 jobs:
   build_and_push_docker_image:
     runs-on: ubuntu-latest
