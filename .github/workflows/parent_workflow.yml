@@ -1,8 +1,6 @@
 name: Parent Workflow
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 jobs:
   trigger_child_workflow:
     runs-on: ubuntu-latest
@@ -10,30 +8,35 @@ jobs:
       REPO_OWNER: ambarih
       REPO_NAME: child_work
       CHILD_WORKFLOW_ID: 95072086
-      token: ${{ secrets.token }}
+      token: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Trigger Child Workflow
-        uses: actions/checkout@v2
-      - name: Run Child Workflow
+        if: github.event_name == 'workflow_dispatch'
+        id: trigger_child
         run: |
-          response=$(curl -X POST -H "Accept: application/vnd.github.v3+json" -H "Authorization: token $token" https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/actions/workflows/$CHILD_WORKFLOW_ID/dispatches -d '{"ref":"main"}' -w "%{http_code}")
+          response=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Accept: application/vnd.github.v3+json" -H "Authorization: token $token" https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/actions/workflows/$CHILD_WORKFLOW_ID/dispatches -d '{"ref":"main"}')
           if [[ $response != 2* ]]; then
             echo "Failed to trigger child workflow"
             exit 1
           fi
+          echo "Child workflow triggered successfully"
+
       - name: Wait for Child Workflow Completion
+        if: github.event_name == 'workflow_dispatch' && steps.trigger_child.outputs.response == '2'
         id: wait_child_workflow
         run: |
           status="queued"
           while [[ $status == "queued" || $status == "in_progress" ]]; do
             sleep 30
-            status=$(curl -s -X GET -H "Accept: application/vnd.github.v3+json" -H "Authorization: token $token" https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/actions/workflows/$CHILD_WORKFLOW_ID/runs/latest | jq -r .status)
+            status=$(curl -s -X GET -H "Accept: application/vnd.github.v3+json" -H "Authorization: token $token" https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/actions/runs/${{ steps.trigger_child.outputs.run_id }} | jq -r .status)
           done
           if [[ $status != "completed" ]]; then
             echo "Child workflow failed or canceled"
             exit 1
           fi
+          echo "Child workflow completed successfully"
+
       - name: Remaining Parent Workflow Steps
-        if: steps.wait_child_workflow.outputs.status == 'completed'
+        if: github.event_name == 'workflow_dispatch' && steps.trigger_child.outputs.response == '2' && steps.wait_child_workflow.outputs.status == 'completed'
         run: |
-          echo "Child workflow completed successfully, continuing with remaining steps"
+          echo "Continuing with remaining steps after child workflow completion"
