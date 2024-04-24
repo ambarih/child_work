@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       REPO_OWNER: ambarih
-      REPO_NAME: trivy_new
+      REPO_NAME: child_work
       CHILD_WORKFLOW_ID: 95072086
       token: ${{ secrets.token }}
     steps:
