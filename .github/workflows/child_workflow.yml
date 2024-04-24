@@ -1,35 +1,48 @@
-name: Build-Docker-Image-Child
-
+# .github/workflows/child_workflow.yml
+name: Child Workflow
 on:
-  workflow_run:
-    workflows: ["Build-Docker-Image-Parent"]
-    types:
-      - completed
+  push:
+    branches:
+      - main
 
 jobs:
-  image_scan_and_push:
+  build_and_push_docker_image:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    env:
+      TAG: python-api
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      USER: ambarish6
+      VERSION: latest
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v1
+      - name: Checkout Repository
+        uses: actions/checkout@v2
 
-    - name: Image Scan
-      uses: aquasecurity/trivy-action@master
-      with:
-        image-ref: '${{ env.USER }}/${{ github.event.workflow_run.job.outputs.image_tag }}'
-        scan-type: 'config'
-        security-checks: 'vuln,secret,config'
-        severity: 'CRITICAL,HIGH'
-        format: 'sarif'
-        output: 'trivy-image-results.sarif'
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ env.DOCKER_USERNAME }}
+          password: ${{ env.DOCKER_PASSWORD }}
 
-    - name: Upload the scan result to GitHub Security
-      uses: github/codeql-action/upload-sarif@main
-      with:
-        sarif_file: 'trivy-image-results.sarif'
-        category: 'image'
+      - name: Build Docker image
+        run: docker build -t ${{ env.USER }}/${{ env.TAG }}:${{ env.VERSION }} .
 
-    - name: Push Docker image to Docker Hub
-      run: docker push ${{ env.USER }}/${{ github.event.workflow_run.job.outputs.image_tag }}
+      - name: Image Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ env.USER }}/${{ env.TAG }}:${{ env.VERSION }}'
+          scan-type: 'config'
+          security-checks: 'vuln,secret,config'
+          severity: 'CRITICAL,HIGH'
+          format: 'sarif'
+          output: 'trivy-image-results.sarif'
+
+      - name: Upload the scan result to GitHub Security
+        uses: github/codeql-action/upload-sarif@main
+        with:
+          sarif_file: 'trivy-image-results.sarif'
+          category: 'image'
+
+      - name: Push Docker image to Docker Hub
+        run: docker push ${{ env.USER }}/${{ env.TAG }}:${{ env.VERSION }}
